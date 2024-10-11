@@ -5,13 +5,14 @@ from dataclasses import asdict
 from util import * 
 import os
 from dotenv import load_dotenv
+from flask_socketio import SocketIO
 
 load_dotenv()
 DB_NAME = os.getenv("RDS_DB_NAME")
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 cur_database = rds_database(db_name=DB_NAME)
-
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 ''' 
 # Route to add new labels for a resource
