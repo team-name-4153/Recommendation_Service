@@ -1,19 +1,17 @@
 import datetime
 from flask import Flask, jsonify, request
 from database.rds_database import rds_database
-from models import Recommendation_Service_Model, WatchSession
+from models import Recommendation_Service_Model
 from dataclasses import asdict
 from util import * 
 import os
 from dotenv import load_dotenv
-from flask_socketio import SocketIO
 
 load_dotenv()
 DB_NAME = os.getenv("RDS_DB_NAME")
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 cur_database = rds_database(db_name=DB_NAME)
-socketio = SocketIO(app, cors_allowed_origins="*")
 
 ''' 
 # Route to add new labels for a resource
@@ -42,7 +40,10 @@ def recommend_resources(keyword):
 
 @app.route("/start_watch", methods=['POST'])
 def user_start_watch():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({"error": "Invalid or missing JSON data"}), 400
+    
     user_id = data.get('user_id')
     stream_id = data.get('stream_id')
 
@@ -56,10 +57,10 @@ def user_start_watch():
     )
 
     if len(existing_session) > 0:
-        cur_database.update_data(
+        res = cur_database.update_data(
             "watch_session",
             {
-                "watch_start_time": datetime.datetime.now(datetime.timezone.utc),
+                "watch_start_time": datetime.datetime.now(),
                 "watch_end_time": None
             },
             {
@@ -67,12 +68,12 @@ def user_start_watch():
                 "stream_id": stream_id
             }
         )
-        message = "Session updated successfully."
+        message = "Session updated successfully." + res
     else:
         new_session = {
             "user_id": user_id,
             "stream_id": stream_id,
-            "watch_start_time": datetime.datetime.now(datetime.timezone.utc),
+            "watch_start_time": datetime.datetime.now(),
             "watch_end_time": None,
             "duration": 0
         }
@@ -94,7 +95,7 @@ def end_watch():
 
     session_data = cur_database.query_data(
         "watch_session", 
-        ["user_id", "stream_id", "watch_start_time"], 
+        ["user_id", "stream_id", "watch_start_time", "duration"], 
         {"user_id": user_id, "stream_id": stream_id}
     )
 
@@ -103,8 +104,8 @@ def end_watch():
 
     # Retrieve watch_start_time and calculate duration
     watch_start_time = session_data[0]['watch_start_time']
-    watch_end_time = datetime.datetime.now(datetime.timezone.utc)
-    duration = (watch_end_time - watch_start_time).total_seconds()
+    watch_end_time = datetime.datetime.now()
+    duration = session_data[0]['duration'] + (watch_end_time - watch_start_time).total_seconds()
 
     # Update the session with end time and duration
     cur_database.update_data(

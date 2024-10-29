@@ -16,7 +16,6 @@ class rds_database:
     def __init__(self, db_name):
         self.conn = pymysql.connect(host=HOST, user=USER, passwd=PASSWORD, db=db_name, port=3306)
         print("Connection established successfully!")
-        self.cursor = self.conn.cursor()
     
     # def insert_data(self, table_name, **kwargs):
     #     try:
@@ -46,7 +45,7 @@ class rds_database:
         # Assuming cursor is a cursor object connected to your database
         # with connection being a database connection
         try:
-            cursor = self.cursor
+            cursor = self.conn.cursor()
             cursor.executemany(sql, values)
             self.conn.commit()
             cursor.close()
@@ -76,7 +75,7 @@ class rds_database:
 
         # Executing the update
         try:
-            cursor = self.cursor
+            cursor = self.conn.cursor()
             cursor.execute(sql, values)
             self.conn.commit()
             cursor.close()
