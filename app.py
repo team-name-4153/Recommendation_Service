@@ -38,80 +38,123 @@ def recommend_resources(keyword):
     resource_ids = [entry['resource_id'] for entry in result]
     return jsonify(resource_ids)
 
-@app.route("/start_watch", methods=['POST'])
-def user_start_watch():
-    data = request.get_json(silent=True)
-    if data is None:
-        return jsonify({"error": "Invalid or missing JSON data"}), 400
+# @app.route("/start_watch", methods=['POST'])
+# def user_start_watch():
+#     data = request.get_json(silent=True)
+#     if data is None:
+#         return jsonify({"error": "Invalid or missing JSON data"}), 400
     
-    user_id = data.get('user_id')
-    stream_id = data.get('stream_id')
+#     user_id = data.get('user_id')
+#     stream_id = data.get('stream_id')
 
-    if not user_id or not stream_id:
-        return jsonify({'error': 'user_id and stream_id are required'}), 400
+#     if not user_id or not stream_id:
+#         return jsonify({'error': 'user_id and stream_id are required'}), 400
 
-    existing_session = cur_database.query_data(
-        "watch_session", 
-        ["user_id", "stream_id"], 
-        {"user_id": user_id, "stream_id": stream_id}
-    )
+#     existing_session = cur_database.query_data(
+#         "watch_session", 
+#         ["user_id", "stream_id"], 
+#         {"user_id": user_id, "stream_id": stream_id}
+#     )
 
-    if len(existing_session) > 0:
-        res = cur_database.update_data(
-            "watch_session",
-            {
-                "watch_start_time": datetime.datetime.now(),
-                "watch_end_time": None
-            },
-            {
-                "user_id": user_id,
-                "stream_id": stream_id
-            }
-        )
-        message = "Session updated successfully." + res
-    else:
-        new_session = {
-            "user_id": user_id,
-            "stream_id": stream_id,
-            "watch_start_time": datetime.datetime.now(),
-            "watch_end_time": None,
-            "duration": 0
-        }
-        cur_database.bulk_insert_data("watch_session", [new_session])
-        message = "Session inserted successfully."
+#     if len(existing_session) > 0:
+#         res = cur_database.update_data(
+#             "watch_session",
+#             {
+#                 "watch_start_time": datetime.datetime.now(),
+#                 "watch_end_time": None
+#             },
+#             {
+#                 "user_id": user_id,
+#                 "stream_id": stream_id
+#             }
+#         )
+#         message = "Session updated successfully." + res
+#     else:
+#         new_session = {
+#             "user_id": user_id,
+#             "stream_id": stream_id,
+#             "watch_start_time": datetime.datetime.now(),
+#             "watch_end_time": None,
+#             "duration": 0
+#         }
+#         cur_database.bulk_insert_data("watch_session", [new_session])
+#         message = "Session inserted successfully."
 
-    return jsonify({"message": message}), 200
+#     return jsonify({"message": message}), 200
 
 
+
+# @app.route('/end_watch', methods=['POST'])
+# def end_watch():
+#     data = request.get_json()
+#     user_id = data.get('user_id')
+#     stream_id = data.get('stream_id')
+
+#     if not user_id or not stream_id:
+#         return jsonify({'error': 'user_id and stream_id are required'}), 400
+
+#     session_data = cur_database.query_data(
+#         "watch_session", 
+#         ["user_id", "stream_id", "watch_start_time", "duration"], 
+#         {"user_id": user_id, "stream_id": stream_id}
+#     )
+
+#     if len(session_data) == 0:
+#         return jsonify({'message': "session does not exist"}), 400
+
+#     watch_start_time = session_data[0]['watch_start_time']
+#     watch_end_time = datetime.datetime.now()
+#     duration = session_data[0]['duration'] + (watch_end_time - watch_start_time).total_seconds()
+
+#     cur_database.update_data(
+#         "watch_session",
+#         {
+#             "watch_end_time": watch_end_time,
+#             "duration": duration     
+#         },
+#         {
+#             "user_id": user_id,
+#             "stream_id": stream_id
+#         }
+#     )
+#     data = {
+#         "user_id": user_id,
+#         "stream_id": stream_id,
+#         "duration": duration
+#     }
+#     es.index(index=es_index_name, body=data)
+
+#     return jsonify({'message': 'Watch session ended', 'duration': duration}), 200
 
 @app.route('/end_watch', methods=['POST'])
 def end_watch():
     data = request.get_json()
     user_id = data.get('user_id')
     stream_id = data.get('stream_id')
+    duration = data.get('duration')
 
-    if not user_id or not stream_id:
-        return jsonify({'error': 'user_id and stream_id are required'}), 400
+    if not user_id or not stream_id or not duration:
+        return jsonify({'error': 'user_id and stream_id and duration are required'}), 400
 
     session_data = cur_database.query_data(
         "watch_session", 
-        ["user_id", "stream_id", "watch_start_time", "duration"], 
+        ["user_id", "stream_id", "duration"], 
         {"user_id": user_id, "stream_id": stream_id}
     )
 
     if len(session_data) == 0:
-        return jsonify({'message': "session does not exist"}), 400
+        new_session = {
+            "user_id": user_id,
+            "stream_id": stream_id,
+            "duration": duration
+        }
+        cur_database.bulk_insert_data("watch_session", [new_session])
+    else:
+        duration += session_data[0]['duration']
 
-    # Retrieve watch_start_time and calculate duration
-    watch_start_time = session_data[0]['watch_start_time']
-    watch_end_time = datetime.datetime.now()
-    duration = session_data[0]['duration'] + (watch_end_time - watch_start_time).total_seconds()
-
-    # Update the session with end time and duration
     cur_database.update_data(
         "watch_session",
         {
-            "watch_end_time": watch_end_time,
             "duration": duration     
         },
         {
@@ -119,9 +162,14 @@ def end_watch():
             "stream_id": stream_id
         }
     )
+    return jsonify({'message': 'Store session', 'duration': duration}), 200
 
-    return jsonify({'message': 'Watch session ended', 'duration': duration}), 200
 
+@app.route("/streams/recommend/<int:user_id>")
+def recommend_streams(user_id):
+    res = cur_database.query_data("watch_session", ["user_id", "stream_id", "duration"])
+    recommended_streams = recommend_streams_for_user(res, user_id)
+    return jsonify(recommended_streams)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000, host='0.0.0.0')

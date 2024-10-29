@@ -11,7 +11,5 @@ class Label:
 class WatchSession:
     user_id: int
     stream_id: int
-    watch_start_time: datetime
-    watch_end_time: datetime
     duration: float
 
