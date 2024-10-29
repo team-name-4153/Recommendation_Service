@@ -126,8 +126,8 @@ def recommend_resources(keyword):
 
 #     return jsonify({'message': 'Watch session ended', 'duration': duration}), 200
 
-@app.route('/end_watch', methods=['POST'])
-def end_watch():
+@app.route('/store_watch_session', methods=['POST'])
+def store_watch_session():
     data = request.get_json()
     user_id = data.get('user_id')
     stream_id = data.get('stream_id')
