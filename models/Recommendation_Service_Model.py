@@ -15,36 +15,28 @@ import json
 #     stream_id: int
 #     duration: float
 
+@dataclass
+class StreamTag:
+    session_id: int # foreign key
+    tag_name: str
 
 @dataclass
 class StreamingSession:
-    session_id: str
-    streamer_id: str
+    session_id: int
+    streamer_id: int
     game: str
-    game_tags: List[str]  # Will be stored as JSON in DB
+    title: str
     start_time: datetime.datetime
     end_time: Optional[datetime.datetime] = None
-    duration: Optional[int] = None  # in seconds
 
 @dataclass
 class ViewingSession:
-    viewing_id: str
-    user_id: str
+    session_id: int # foreign key
+    user_id: int
     session_id: str
-    start_watching_time: datetime.datetime
-    end_watching_time: Optional[datetime.datetime] = None
-    watch_duration: Optional[int] = None  # in seconds
+    stop_watching_time: Optional[datetime.datetime] = None
+    watch_duration: int
     
-
-@dataclass
-class UserViewingPreference:
-    user_id: str
-    game: str
-    streamer_id: str
-    game_tags: List[str]  # Will be stored as JSON in DB
-    total_watch_time: int = 0  # in seconds
-    last_watched: Optional[datetime.datetime] = None
-    watch_count: int = 0
 
 
 # DB schema 
