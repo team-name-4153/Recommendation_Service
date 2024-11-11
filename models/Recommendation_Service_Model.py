@@ -3,20 +3,10 @@ import datetime
 from typing import Optional, List
 import json
 
-# @dataclass
-# class Label:
-#     resource_id: int
-#     label: str
-
-
-# @dataclass
-# class WatchSession:
-#     user_id: int
-#     stream_id: int
-#     duration: float
 
 @dataclass
 class StreamTag:
+    tag_id: int
     session_id: int # foreign key
     tag_name: str
 
@@ -33,7 +23,6 @@ class StreamingSession:
 class ViewingSession:
     session_id: int # foreign key
     user_id: int
-    session_id: str
     stop_watching_time: Optional[datetime.datetime] = None
     watch_duration: int
     
@@ -41,37 +30,28 @@ class ViewingSession:
 
 # DB schema 
 '''
+CREATE TABLE streaming_session (
+    session_id INT PRIMARY KEY,
+    streamer_id INT NOT NULL,
+    game VARCHAR(255) NOT NULL,
+    title VARCHAR(255),
+    start_time DATETIME NOT NULL,
+    end_time DATETIME
+);
 
-CREATE TABLE streaming_sessions (
-    session_id VARCHAR(36) PRIMARY KEY, -- streaming_id
-    streamer_id VARCHAR(36) NOT NULL,
-    game VARCHAR(100) NOT NULL,
-    game_tags JSON,
-    start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    end_time TIMESTAMP NULL,
-    duration INT NULL
-)
+CREATE TABLE stream_tag (
+    tag_id INT PRIMARY KEY AUTO_INCREMENT,
+    session_id INT NOT NULL,
+    tag_name VARCHAR(255) NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES streaming_session(session_id)
+);
 
-CREATE TABLE viewing_sessions (
-    viewing_id VARCHAR(36) PRIMARY KEY,
-    user_id VARCHAR(36) NOT NULL,
-    session_id VARCHAR(36) NOT NULL,
-    start_watching_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    end_watching_time TIMESTAMP NULL,
-    watch_duration INT NULL,
-    FOREIGN KEY (session_id) REFERENCES streaming_sessions(session_id)
-)
-
-CREATE TABLE user_viewing_preferences (
-    user_id VARCHAR(36),
-    game VARCHAR(100),
-    streamer_id VARCHAR(36),
-    game_tags JSON,
-    total_watch_time INT DEFAULT 0,
-    last_watched TIMESTAMP,
-    watch_count INT DEFAULT 0,
-    PRIMARY KEY (user_id, game, streamer_id)
-)
-
-
+CREATE TABLE viewing_session (
+    viewing_session_id INT PRIMARY KEY AUTO_INCREMENT,
+    session_id INT NOT NULL,
+    user_id INT NOT NULL,
+    stop_watching_time DATETIME,
+    watch_duration INT NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES streaming_session(session_id)
+);
 '''
