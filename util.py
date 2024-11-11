@@ -41,8 +41,8 @@ def recommendation_setup(watch_sessions):
     watch_sessions_df = pd.DataFrame(watch_sessions)
     user_stream_matrix = watch_sessions_df.pivot_table(
         index='user_id', 
-        columns='stream_id', 
-        values='duration', 
+        columns='session_id', 
+        values='watch_duration', 
         fill_value=0
     )
 

@@ -1,3 +1,4 @@
+import sys
 import pymysql
 from dotenv import load_dotenv
 import os
@@ -8,42 +9,51 @@ from util import *
 load_dotenv()
 HOST = os.getenv("RDS_HOST")
 PORT = os.getenv("RDS_PORT")
-USER = os.getenv("RDS_USER")  
-PASSWORD = os.getenv("RDS_PASSWORD")  
-# DB_NAME = os.getenv("RDS_DB_NAME")  
+USER = os.getenv("RDS_USER")
+PASSWORD = os.getenv("RDS_PASSWORD")
 
 class rds_database:
     def __init__(self, db_name):
         self.conn = pymysql.connect(host=HOST, user=USER, passwd=PASSWORD, db=db_name, port=3306)
         print("Connection established successfully!")
     
-    # def insert_data(self, table_name, **kwargs):
-    #     try:
-    #         sql, data = build_INSERTION_sql(table_name=table_name, **kwargs)
-    #         self.cursor.execute(sql, data)
-    #         self.conn.commit()  # Commit to save changes
-    #     except Exception as e:
-    #         return str(e)
-    #     return "Success"
-        
+
+    def insert_data_return_id(self, table_name, record):
+        if not record:
+            return "No record to insert."
+
+        columns = ', '.join(record.keys())
+        placeholders = ', '.join(['%s'] * len(record))
+
+        sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
+
+        values = tuple(record.values())
+
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql, values)
+            self.conn.commit()
+            last_id = cursor.lastrowid
+            cursor.close()
+
+            print(f"Successfully inserted record into {table_name} with ID {last_id}.")
+            return last_id  # Return the last inserted ID
+        except Exception as e:
+            print(f"Error inserting record: {e}")
+            return str(e)
+
     # Example usage:
     # self.bulk_insert_data([{'username': 'alice', 'age': 30}, {'username': 'bob', 'age': 25}])
     def bulk_insert_data(self,table_name, records):
         if not records:
             return "No records to insert."
-
-        # Extracting column names from the first dictionary (assuming all records are uniform)
         columns = ', '.join(records[0].keys())
         placeholders = ', '.join(['%s'] * len(records[0]))
 
-        # Construct the SQL statement
         sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
 
-        # Preparing the values to insert
         values = [tuple(record.values()) for record in records]
 
-        # Assuming cursor is a cursor object connected to your database
-        # with connection being a database connection
         try:
             cursor = self.conn.cursor()
             cursor.executemany(sql, values)
@@ -59,21 +69,16 @@ class rds_database:
     # Example usage:
     # self.update_data('users', {'age': 31}, {'username': 'alice'})
     def update_data(self, table_name ,set_values, conditions):
-    # Preparing SET part of SQL command
         set_clause = ', '.join([f"{key} = %s" for key in set_values.keys()])
         set_values_list = list(set_values.values())
 
-        # Preparing WHERE part of SQL command
         condition_clause = ' AND '.join([f"{key} = %s" for key in conditions.keys()])
         condition_values_list = list(conditions.values())
 
-        # Complete values list for SQL execution
         values = set_values_list + condition_values_list
 
-        # Constructing the SQL statement
         sql = f"UPDATE {table_name} SET {set_clause} WHERE {condition_clause}"
 
-        # Executing the update
         try:
             cursor = self.conn.cursor()
             cursor.execute(sql, values)
@@ -124,5 +129,22 @@ class rds_database:
             return []
         except Exception as e:
             print(f"Error querying data: {e}")
+            return []
+
+    def custom_query_data(self, sql):
+
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
+
+            records = cursor.fetchall()
+            cursor.close()
+
+            if records:
+                columns = [desc[0] for desc in cursor.description]
+                return [dict(zip(columns, record)) for record in records]
+            return []
+        except Exception as e:
+            print(f"Error querying data: {e}", file=sys.stderr)
             return []
 
