@@ -106,12 +106,12 @@ def list_videos():
 def store_watch_session():
     data = request.get_json()
     user_id = data.get('user_id')
-    session_id = data.get('stream_id')
+    session_id = data.get('session_id')
     watch_duration = data.get('duration')
     stop_watching_time = data.get('stop_watching_time')
 
     if not user_id or not session_id or not watch_duration:
-        return jsonify({'error': 'user_id and stream_id and duration are required'}), 400
+        return jsonify({'error': 'user_id and session_id and duration are required'}), 400
 
     session_data = cur_database.query_data(
         "view_session", 
