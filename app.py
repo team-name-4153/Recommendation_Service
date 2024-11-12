@@ -75,7 +75,7 @@ def create_stream():
     return jsonify({'message': 'Store session', "session_id": session_id}), 200
 
 @app.route('/end_stream', methods=['POST'])
-def create_stream():
+def end_stream():
     data = request.get_json()
     session_id = data.get('session_id')
     streamer_id = data.get('streamer_id')
