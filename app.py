@@ -28,16 +28,6 @@ def add_label():
 '''
 
 
-# Route to recommend resources based on a label
-# @app.route("/labels/recommend/<string:keyword>")
-# def recommend_resources(keyword):
-#     result = cur_database.query_data('labels', columns=['resource_id'], conditions={'label': keyword})
-#     result = serialize_data(result)
-#     if not result:
-#         return jsonify({"message": "No matching resources found."})
-#     resource_ids = [entry['resource_id'] for entry in result]
-#     return jsonify(resource_ids)
-
 
 @app.route('/create_stream', methods=['POST'])
 def create_stream():
@@ -50,7 +40,11 @@ def create_stream():
 
 
     if not streamer_id or not game:
-        return jsonify({'error': 'streamer_id and game are required'}), 400
+        return jsonify({
+            'status': 'error',
+            'message': 'streamer_id and game are required',
+            "data": {}
+        }), 400
  
     new_session = {
         "streamer_id": streamer_id,
@@ -72,7 +66,13 @@ def create_stream():
         }
         new_tags_session.append(new_session)
     cur_database.bulk_insert_data("stream_tag", new_tags_session)
-    return jsonify({'message': 'Store session', "session_id": session_id}), 200
+    return jsonify({
+        'status': 'success',
+        'message': 'Store session',
+        "data": {
+            "session_id": session_id
+        }
+        }), 200
 
 @app.route('/end_stream', methods=['POST'])
 def end_stream():
@@ -81,24 +81,93 @@ def end_stream():
     streamer_id = data.get('streamer_id')
     end_time = datetime.datetime.now()
 
+    if not streamer_id or not session_id:
+        return jsonify({
+            'status': 'error',
+            'message': 'streamer_id and session_id are required',
+            "data": {}
+        }), 400
+
     cur_database.update_data("stream_session",
                             {"end_time": end_time},
                             {"session_id": session_id,
                              "streamer_id": streamer_id},
                         )
 
-    return jsonify({'message': 'Updated'}), 200
+    return jsonify({
+        'status': 'success',
+        'message': 'Updated',
+        "data": {}
+    }), 200
 
 
 @app.route('/streams')
 def list_streams():
-    streams = cur_database.custom_query_data("SELECT * FROM stream_session WHERE end_time is NULL")
-    return {'streams': streams}
+    ITEMS_PER_PAGE = 10
+    
+    page = int(request.args.get('page', 1))
+    
+    total_count_query = "SELECT COUNT(*) FROM stream_session WHERE end_time is NULL"
+    total_count = cur_database.custom_query_data(total_count_query)[0]['COUNT(*)']
+    
+    offset = (page - 1) * ITEMS_PER_PAGE
+    
+    query = f"""
+        SELECT * FROM stream_session
+        WHERE end_time is NULL
+        LIMIT {ITEMS_PER_PAGE} OFFSET {offset}
+    """
+    streams = cur_database.custom_query_data(query)
+    
+    base_url = request.base_url
+    next_page = f"{base_url}?page={page + 1}" if offset + ITEMS_PER_PAGE < total_count else None
+    previous_page = f"{base_url}?page={page - 1}" if page > 1 else None
+    
+    response = {
+        "count": len(streams),
+        "total_count": total_count,
+        "current": f"{base_url}?page={page}",
+        "next": next_page,
+        "previous": previous_page,
+        "results": streams
+    }
+    
+    return jsonify(response, 200)
+
 
 @app.route('/videos')
 def list_videos():
-    streams = cur_database.custom_query_data("SELECT * FROM stream_session WHERE end_time is not NULL")
-    return {'videos': streams}
+    ITEMS_PER_PAGE = 10
+    
+    page = int(request.args.get('page', 1))
+    
+    total_count_query = "SELECT COUNT(*) FROM stream_session WHERE end_time is not NULL"
+    total_count = cur_database.custom_query_data(total_count_query)[0]['COUNT(*)']
+    
+    offset = (page - 1) * ITEMS_PER_PAGE
+    
+    query = f"""
+        SELECT * FROM stream_session
+        WHERE end_time is not NULL
+        LIMIT {ITEMS_PER_PAGE} OFFSET {offset}
+    """
+    streams = cur_database.custom_query_data(query)
+    
+    base_url = request.base_url
+    next_page = f"{base_url}?page={page + 1}" if offset + ITEMS_PER_PAGE < total_count else None
+    previous_page = f"{base_url}?page={page - 1}" if page > 1 else None
+    
+    response = {
+        "count": len(streams),
+        "total_count": total_count,
+        "current": f"{base_url}?page={page}",
+        "next": next_page,
+        "previous": previous_page,
+        "results": streams
+    }
+    
+    return jsonify(response, 200)
+
 
 
 
@@ -123,15 +192,15 @@ def store_watch_session():
         new_session = {
             "user_id": user_id,
             "session_id": session_id,
-            "duration": watch_duration,
+            "watch_duration": watch_duration,
             "stop_watching_time": stop_watching_time,
         }
-        cur_database.bulk_insert_data("watch_session", [new_session])
+        res = cur_database.bulk_insert_data("view_session", [new_session])
     else:
         watch_duration += session_data[0]['watch_duration']
 
-        cur_database.update_data(
-            "watch_session",
+        res = cur_database.update_data(
+            "view_session",
             {
                 "watch_duration": watch_duration,
                 "stop_watching_time": stop_watching_time   
@@ -141,14 +210,92 @@ def store_watch_session():
                 "session_id": session_id
             }
         )
-    return jsonify({'message': 'Store session', 'duration': watch_duration}), 200
+    return jsonify({
+        'status': 'success',
+        'message': 'Store session',
+        "data": {"result": res}
+    }), 200
 
 
 @app.route("/streams/recommend/<int:user_id>")
 def recommend_streams(user_id):
-    res = cur_database.query_data("watch_session", ["user_id", "session_id", "watch_duration"])
-    recommended_streams = recommend_streams_for_user(res, user_id)
-    return jsonify(recommended_streams)
+    top_n = int(request.args.get('n', 10))
+    query = f'''SELECT
+            vs.user_id,
+            ss.session_id,
+            st.tag_name
+        FROM
+            stream_session ss
+        LEFT JOIN
+                view_session vs ON ss.session_id = vs.session_id
+        LEFT JOIN
+            stream_tag st ON ss.session_id = st.session_id
+        WHERE ss.end_time is NULL
+            '''
+    streams = cur_database.custom_query_data(query)
+    result_dict = {}
+    for stream in streams:
+        ui = stream["user_id"]
+        si = stream["session_id"]
+        if (ui, si) not in result_dict:
+            result_dict[(ui, si)] = []
+        result_dict[(ui, si)].append(stream["tag_name"])
+    
+    res = [[user_id, session_id, tags] for (user_id, session_id), tags in result_dict.items()]
+    recommended_stream_ids = recommend_streams_for_user(res, user_id, top_n=top_n)
+    formatted_streams = tuple(recommended_stream_ids)
+    if len(formatted_streams) == 1:
+        formatted_streams = (formatted_streams[0],)
+    query = f"""
+        SELECT * FROM stream_session
+        WHERE session_id IN {formatted_streams}
+    """
+    recommended_streams = cur_database.custom_query_data(query)
+    return jsonify({
+        'status': 'success',
+        'message': 'OK',
+        "data": recommended_streams
+    }), 200
+
+@app.route("/videos/recommend/<int:user_id>")
+def recommend_videos(user_id):
+    top_n = int(request.args.get('n', 10))
+    query = f'''SELECT
+            vs.user_id,
+            ss.session_id,
+            st.tag_name
+        FROM
+            stream_session ss
+        LEFT JOIN
+                view_session vs ON ss.session_id = vs.session_id
+        LEFT JOIN
+            stream_tag st ON ss.session_id = st.session_id
+        WHERE ss.end_time is not NULL
+            '''
+    streams = cur_database.custom_query_data(query)
+    result_dict = {}
+    for stream in streams:
+        ui = stream["user_id"]
+        si = stream["session_id"]
+        if (ui, si) not in result_dict:
+            result_dict[(ui, si)] = []
+        result_dict[(ui, si)].append(stream["tag_name"])
+    
+    res = [[user_id, session_id, tags] for (user_id, session_id), tags in result_dict.items()]
+    recommended_stream_ids = recommend_streams_for_user(res, user_id, top_n=top_n)
+    formatted_streams = tuple(recommended_stream_ids)
+    if len(formatted_streams) == 1:
+        formatted_streams = (formatted_streams[0],)
+    query = f"""
+        SELECT * FROM stream_session
+        WHERE session_id IN {formatted_streams}
+    """
+    recommended_streams = cur_database.custom_query_data(query)
+    return jsonify({
+        'status': 'success',
+        'message': 'OK',
+        "data": recommended_streams
+    }), 200
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000, host='0.0.0.0')
