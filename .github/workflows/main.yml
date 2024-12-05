@@ -1,0 +1,41 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Build Docker image
+        run: |
+          docker build -t rec_service:latest .
+
+      - name: Save Docker image
+        run: docker save rec_service:latest | gzip > yourapp.tar.gz
+
+      - name: Transfer Docker image to EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "yourapp.tar.gz"
+          target: "/tmp"
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker load < /tmp/yourapp.tar.gz
+            docker stop rec_service || true
+            docker rm rec_service || true
+            docker run -d --name rec_service -p 5001:5000 yourapp:latest
