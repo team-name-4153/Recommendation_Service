@@ -1,1 +1,1 @@
-This is recomendation service (Add for testing auto deployment)
+This is recomendation service (Add for testing auto-deployment)
