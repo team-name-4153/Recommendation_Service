@@ -131,20 +131,24 @@ class rds_database:
             print(f"Error querying data: {e}")
             return []
 
-    def custom_query_data(self, sql):
 
+    def custom_query_data(self, sql):
+        cursor = None
         try:
             cursor = self.conn.cursor()
             cursor.execute(sql)
-
+            
             records = cursor.fetchall()
-            cursor.close()
+            columns = [desc[0] for desc in cursor.description]
 
-            if records:
-                columns = [desc[0] for desc in cursor.description]
-                return [dict(zip(columns, record)) for record in records]
-            return []
+            return [dict(zip(columns, record)) for record in records]
+        
         except Exception as e:
             print(f"Error querying data: {e}", file=sys.stderr)
             return []
+        
+        finally:
+            if cursor:
+                cursor.close()
+
 

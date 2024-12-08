@@ -33,8 +33,8 @@ class ViewSession:
 # DB schema 
 '''
 CREATE TABLE stream_session (
-    session_id INT AUTO_INCREMENT,
-    streamer_id INT NOT NULL,
+    session_id BIGINT AUTO_INCREMENT,
+    streamer_id VARCHAR(255) NOT NULL,
     game VARCHAR(255) NOT NULL,
     title VARCHAR(255),
     start_time DATETIME NOT NULL,
@@ -44,7 +44,7 @@ CREATE TABLE stream_session (
 );
 
 CREATE TABLE stream_tag (
-    session_id INT NOT NULL,
+    session_id BIGINT NOT NULL,
     tag_name VARCHAR(255) NOT NULL,
     PRIMARY KEY (session_id, tag_name),
     FOREIGN KEY (session_id) REFERENCES stream_session(session_id)
@@ -52,8 +52,8 @@ CREATE TABLE stream_tag (
 
 CREATE TABLE view_session (
     viewing_session_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    session_id INT NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
+    session_id BIGINT NOT NULL,
     stop_watching_time INT,
     watch_duration INT NOT NULL,
     FOREIGN KEY (session_id) REFERENCES stream_session(session_id)
