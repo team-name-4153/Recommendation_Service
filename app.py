@@ -147,7 +147,10 @@ def list_videos():
     page = int(request.args.get('page', 1))
     
     total_count_query = "SELECT COUNT(*) FROM stream_session WHERE end_time is not NULL"
-    total_count = cur_database.custom_query_data(total_count_query)[0]['COUNT(*)']
+    res = cur_database.custom_query_data(total_count_query)
+    total_count = 0
+    if res:
+        total_count = res[0]['COUNT(*)']
     
     offset = (page - 1) * ITEMS_PER_PAGE
     
