@@ -135,6 +135,8 @@ class rds_database:
     def custom_query_data(self, sql):
         cursor = None
         try:
+            if not self.conn.is_connected():
+                self.conn.ping(reconnect=True, attempts=3, delay=5)
             cursor = self.conn.cursor()
             cursor.execute(sql)
             
