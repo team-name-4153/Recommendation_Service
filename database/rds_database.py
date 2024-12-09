@@ -2,6 +2,7 @@ import sys
 import pymysql
 from dotenv import load_dotenv
 import os
+from pymysql import OperationalError, MySQLError
 from util import *
 
 
@@ -14,10 +15,29 @@ PASSWORD = os.getenv("RDS_PASSWORD")
 
 class rds_database:
     def __init__(self, db_name):
-        self.conn = pymysql.connect(host=HOST, user=USER, passwd=PASSWORD, db=db_name, port=3306)
-        print("Connection established successfully!")
-    
+        self.db_name = db_name
+        self.connect()
 
+    
+    def connect(self):
+        try:
+            self.conn = pymysql.connect(
+                host=HOST,
+                user=USER,
+                password=PASSWORD,
+                db=self.db_name,
+                port=3306,
+            )
+            print("Connection established successfully!")
+        except MySQLError as e:
+            print(f"Error connecting to the database: {e}", file=sys.stderr)
+            sys.exit(1)
+    def reconnect(self):
+        try:
+            self.conn.close()
+        except:
+            pass  # Ignore errors on close
+        self.connect()
     def insert_data_return_id(self, table_name, record):
         if not record:
             return "No record to insert."
@@ -38,6 +58,11 @@ class rds_database:
 
             print(f"Successfully inserted record into {table_name} with ID {last_id}.")
             return last_id  # Return the last inserted ID
+        except OperationalError as e:
+            if e.args[0] in (2006, 2013):  # MySQL server has gone away, Lost connection
+                print("Connection lost. Attempting to reconnect...", file=sys.stderr)
+                self.reconnect()
+                return self.insert_data_return_id(table_name, record)
         except Exception as e:
             print(f"Error inserting record: {e}")
             return str(e)
@@ -61,6 +86,11 @@ class rds_database:
             cursor.close()
             print(f"Successfully inserted {len(records)} records into {table_name}.")
             return "Success"
+        except OperationalError as e:
+            if e.args[0] in (2006, 2013):
+                print("Connection lost. Attempting to reconnect...", file=sys.stderr)
+                self.reconnect()
+                return self.bulk_insert_data(table_name, records)  # Retry
         except Exception as e:
             print(f"Error inserting records: {e}")
             return str(e)
@@ -86,6 +116,11 @@ class rds_database:
             cursor.close()
             print(f"Successfully updated records in {table_name}.")
             return "Success"
+        except OperationalError as e:
+            if e.args[0] in (2006, 2013):
+                print("Connection lost. Attempting to reconnect...", file=sys.stderr)
+                self.reconnect()
+                return self.update_data(table_name, set_values, conditions)
         except Exception as e:
             print(f"Error updating records: {e}")
             return str(e)
@@ -127,30 +162,41 @@ class rds_database:
                 columns = [desc[0] for desc in cursor.description]
                 return [dict(zip(columns, record)) for record in records]
             return []
+        except OperationalError as e:
+            if e.args[0] in (2006, 2013):
+                print("Connection lost. Attempting to reconnect...", file=sys.stderr)
+                self.reconnect()
+                return self.query_data(table_name, columns, conditions)
         except Exception as e:
             print(f"Error querying data: {e}")
             return []
 
 
     def custom_query_data(self, sql):
-        cursor = None
         try:
-            if not self.conn.is_connected():
-                self.conn.ping(reconnect=True, attempts=3, delay=5)
-            cursor = self.conn.cursor()
-            cursor.execute(sql)
-            
-            records = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
+            self.conn.ping(reconnect=True)
+        except OperationalError as e:
+            print(f"Error pinging database: {e}", file=sys.stderr)
+            self.reconnect()
 
-            return [dict(zip(columns, record)) for record in records]
-        
-        except Exception as e:
-            print(f"Error querying data: {e}", file=sys.stderr)
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute(sql)
+                records = cursor.fetchall()
+                return records
+        except OperationalError as e:
+            if e.args[0] in (2006, 2013):
+                print("Connection lost during custom query. Attempting to reconnect...", file=sys.stderr)
+                self.reconnect()
+                return self.custom_query_data(sql)
+            else:
+                print(f"Operational Error in custom query: {e}", file=sys.stderr)
+                return []
+        except MySQLError as e:
+            print(f"MySQL Error in custom query: {e}", file=sys.stderr)
             return []
-        
-        finally:
-            if cursor:
-                cursor.close()
+        except Exception as e:
+            print(f"Unexpected error in custom query: {e}", file=sys.stderr)
+            return []
 
 
