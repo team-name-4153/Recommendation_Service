@@ -174,29 +174,27 @@ class rds_database:
 
     def custom_query_data(self, sql):
         try:
+            # Ping the server to check if the connection is alive; reconnect if not
             self.conn.ping(reconnect=True)
         except OperationalError as e:
             print(f"Error pinging database: {e}", file=sys.stderr)
             self.reconnect()
-
+            
+        cursor = None
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute(sql)
                 records = cursor.fetchall()
-                return records
+                columns = [desc[0] for desc in cursor.description]
+                return [dict(zip(columns, record)) for record in records]
         except OperationalError as e:
             if e.args[0] in (2006, 2013):
-                print("Connection lost during custom query. Attempting to reconnect...", file=sys.stderr)
+                print("Connection lost. Attempting to reconnect...", file=sys.stderr)
                 self.reconnect()
                 return self.custom_query_data(sql)
-            else:
-                print(f"Operational Error in custom query: {e}", file=sys.stderr)
-                return []
-        except MySQLError as e:
-            print(f"MySQL Error in custom query: {e}", file=sys.stderr)
-            return []
         except Exception as e:
-            print(f"Unexpected error in custom query: {e}", file=sys.stderr)
+            print(f"Error querying data: {e}", file=sys.stderr)
             return []
+
 
 
