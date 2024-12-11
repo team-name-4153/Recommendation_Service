@@ -101,8 +101,6 @@ def list_games():
     limit {str(limit)}
     '''
     games = cur_database.custom_query_data(query)
-    if games:
-        games = games[0]
     
     return jsonify(games), 200
 @app.route('/streams')
