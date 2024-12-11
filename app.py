@@ -17,8 +17,8 @@ app = Flask(__name__)
 CORS(app, resources={
     r"/*": {
         "origins": [
-        "https://user-home.d27vaquqa87q60.amplifyapp.com/",
-        "https://main.d27vaquqa87q60.amplifyapp.com/",
+        "https://user-home.d27vaquqa87q60.amplifyapp.com",
+        "https://main.d27vaquqa87q60.amplifyapp.com",
         "http://localhost:3000",
     ],
     }
