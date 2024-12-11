@@ -2,7 +2,7 @@ import sys
 import pymysql
 from dotenv import load_dotenv
 import os
-from pymysql import OperationalError, MySQLError
+from pymysql import OperationalError, MySQLError, InternalError
 from util import *
 
 
@@ -58,11 +58,10 @@ class rds_database:
 
             print(f"Successfully inserted record into {table_name} with ID {last_id}.")
             return last_id  # Return the last inserted ID
-        except OperationalError as e:
-            if e.args[0] in (2006, 2013):  # MySQL server has gone away, Lost connection
-                print("Connection lost. Attempting to reconnect...", file=sys.stderr)
-                self.reconnect()
-                return self.insert_data_return_id(table_name, record)
+        except (OperationalError, InternalError) as e:
+            print("Connection lost. Attempting to reconnect...", file=sys.stderr)
+            self.reconnect()
+            return self.insert_data_return_id(table_name, record)
         except Exception as e:
             print(f"Error inserting record: {e}")
             return str(e)
@@ -86,11 +85,10 @@ class rds_database:
             cursor.close()
             print(f"Successfully inserted {len(records)} records into {table_name}.")
             return "Success"
-        except OperationalError as e:
-            if e.args[0] in (2006, 2013):
-                print("Connection lost. Attempting to reconnect...", file=sys.stderr)
-                self.reconnect()
-                return self.bulk_insert_data(table_name, records)  # Retry
+        except (OperationalError, InternalError) as e:
+            print("Connection lost. Attempting to reconnect...", file=sys.stderr)
+            self.reconnect()
+            return self.bulk_insert_data(table_name, records)  # Retry
         except Exception as e:
             print(f"Error inserting records: {e}")
             return str(e)
@@ -116,11 +114,10 @@ class rds_database:
             cursor.close()
             print(f"Successfully updated records in {table_name}.")
             return "Success"
-        except OperationalError as e:
-            if e.args[0] in (2006, 2013):
-                print("Connection lost. Attempting to reconnect...", file=sys.stderr)
-                self.reconnect()
-                return self.update_data(table_name, set_values, conditions)
+        except (OperationalError, InternalError) as e:
+            print("Connection lost. Attempting to reconnect...", file=sys.stderr)
+            self.reconnect()
+            return self.update_data(table_name, set_values, conditions)
         except Exception as e:
             print(f"Error updating records: {e}")
             return str(e)
@@ -159,11 +156,10 @@ class rds_database:
                 res = [dict(zip(columns, record)) for record in records]
             cursor.close()
             return res
-        except OperationalError as e:
-            if e.args[0] in (2006, 2013):
-                print("Connection lost. Attempting to reconnect...", file=sys.stderr)
-                self.reconnect()
-                return self.query_data(table_name, columns, conditions)
+        except (OperationalError, InternalError) as e:
+            print("Connection lost. Attempting to reconnect...", file=sys.stderr)
+            self.reconnect()
+            return self.query_data(table_name, columns, conditions)
         except Exception as e:
             print(f"Error querying data: {e}")
             return []
@@ -189,11 +185,10 @@ class rds_database:
                 res = [dict(zip(columns, record)) for record in records]
             cursor.close()
             return res
-        except OperationalError as e:
-            if e.args[0] in (2006, 2013):
-                print("Connection lost. Attempting to reconnect...", file=sys.stderr)
-                self.reconnect()
-                return self.custom_query_data(sql)
+        except (OperationalError, InternalError) as e:
+            print("Connection lost. Attempting to reconnect...", file=sys.stderr)
+            self.reconnect()
+            return self.custom_query_data(sql)
         except Exception as e:
             print(f"Error querying data: {e}", file=sys.stderr)
             return []
