@@ -13,13 +13,18 @@ load_dotenv()
 DB_NAME = os.getenv("RDS_DB_NAME")
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
+def allow_origins(origin):
+    if origin and origin.endswith('.d27vaquqa87q60.amplifyapp.com'):
+        return True
+    if origin == "http://localhost:3000":
+        return True
+    return False
+
 CORS(app, resources={
-    r"/*": {"origins": [
-        "http://localhost:3000",
-        "https://user-home.d27vaquqa87q60.amplifyapp.com"
-        "https://main.d27vaquqa87q60.amplifyapp.com"
-        ]}
-    }, supports_credentials=True)
+    r"/*": {
+        "origins": allow_origins,
+    }
+}, supports_credentials=True)
 
 cur_database = rds_database(db_name=DB_NAME)
 
