@@ -259,8 +259,16 @@ def store_watch_session():
 
 
 
-@app.route("/videos/recommend/<string:user_id>")
+@app.route("/videos/recommend")
 def recommend_videos(user_id):
+    data = request.args
+    user_id = data.get('user_id', None)
+    if not user_id:
+        return jsonify({
+            'status': 'error',
+            'message': 'user_id not given',
+            "data": []
+        }), 400
     top_n = int(request.args.get('n', 10))
     query = f'''SELECT
             vs.user_id,
