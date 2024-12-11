@@ -124,8 +124,10 @@ def list_streams():
     previous_page = f"{base_url}?page={page - 1}" if page > 1 else None
     if game:
         current += "&game=" + game
-        next_page += "&game=" + game
-        previous_page += "&game=" + game
+        if next_page:
+            next_page += "&game=" + game
+        if previous_page:
+            previous_page += "&game=" + game
     
     response = {
         "count": len(streams),
@@ -175,7 +177,6 @@ def list_videos():
     if game:
         current += "&game=" + game
         if next_page:
-            print(next_page, game)
             next_page += "&game=" + game
         if previous_page:
             previous_page += "&game=" + game
