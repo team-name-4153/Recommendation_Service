@@ -175,6 +175,7 @@ def list_videos():
     if game:
         current += "&game=" + game
         if next_page:
+            print(next_page, game)
             next_page += "&game=" + game
         if previous_page:
             previous_page += "&game=" + game
