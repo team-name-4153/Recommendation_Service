@@ -93,9 +93,16 @@ def end_stream():
 def list_streams():
     ITEMS_PER_PAGE = 10
     
-    page = int(request.args.get('page', 1))
+    data = request.args
+    page = int(data.get('page', 1))
+    game = data.get('game', None)
     
-    total_count_query = "SELECT COUNT(*) FROM stream_session WHERE end_time is NULL"
+    total_count_query = f'''
+    SELECT COUNT(*)
+    FROM stream_session
+    WHERE end_time IS NULL
+    {f"and game = {game}" if game else ""}
+    '''
     res = cur_database.custom_query_data(total_count_query)
     total_count = 0
     if res:
@@ -105,19 +112,25 @@ def list_streams():
     
     query = f"""
         SELECT * FROM stream_session
-        WHERE end_time is NULL
+        WHERE end_time IS NULL
+        {f"and game = {game}" if game else ""}
         LIMIT {ITEMS_PER_PAGE} OFFSET {offset}
     """
     streams = cur_database.custom_query_data(query)
     
     base_url = request.base_url
+    current = f"{base_url}?page={page}"
     next_page = f"{base_url}?page={page + 1}" if offset + ITEMS_PER_PAGE < total_count else None
     previous_page = f"{base_url}?page={page - 1}" if page > 1 else None
+    if game:
+        current += "&game=" + game
+        next_page += "&game=" + game
+        previous_page += "&game=" + game
     
     response = {
         "count": len(streams),
         "total_count": total_count,
-        "current": f"{base_url}?page={page}",
+        "current": current,
         "next": next_page,
         "previous": previous_page,
         "results": streams
@@ -127,12 +140,19 @@ def list_streams():
 
 
 @app.route('/videos')
-def list_videos():
+def list_streams():
     ITEMS_PER_PAGE = 10
     
-    page = int(request.args.get('page', 1))
+    data = request.args
+    page = int(data.get('page', 1))
+    game = data.get('game', None)
     
-    total_count_query = "SELECT COUNT(*) FROM stream_session WHERE end_time is not NULL"
+    total_count_query = f'''
+    SELECT COUNT(*)
+    FROM stream_session
+    WHERE end_time IS NOT NULL
+    {f"and game = {game}" if game else ""}
+    '''
     res = cur_database.custom_query_data(total_count_query)
     total_count = 0
     if res:
@@ -142,19 +162,25 @@ def list_videos():
     
     query = f"""
         SELECT * FROM stream_session
-        WHERE end_time is not NULL
+        WHERE end_time IS NOT NULL
+        {f"and game = {game}" if game else ""}
         LIMIT {ITEMS_PER_PAGE} OFFSET {offset}
     """
     streams = cur_database.custom_query_data(query)
     
     base_url = request.base_url
+    current = f"{base_url}?page={page}"
     next_page = f"{base_url}?page={page + 1}" if offset + ITEMS_PER_PAGE < total_count else None
     previous_page = f"{base_url}?page={page - 1}" if page > 1 else None
+    if game:
+        current += "&game=" + game
+        next_page += "&game=" + game
+        previous_page += "&game=" + game
     
     response = {
         "count": len(streams),
         "total_count": total_count,
-        "current": f"{base_url}?page={page}",
+        "current": current,
         "next": next_page,
         "previous": previous_page,
         "results": streams
