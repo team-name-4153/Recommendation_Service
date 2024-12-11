@@ -115,9 +115,6 @@ def test():
     resp.set_cookie(
         'user_info',
         value='1324',           # Example value
-        httponly=True,         # Prevents JavaScript access
-        secure=True,           # Ensures cookie is sent over HTTPS
-        samesite='None'        # Allows cross-site cookie
     )
     return resp
 @app.route('/streams')
