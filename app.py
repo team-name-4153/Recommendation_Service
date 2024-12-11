@@ -15,10 +15,10 @@ BASEDIR = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 def allow_origins(origin):
     if origin and origin.endswith('.d27vaquqa87q60.amplifyapp.com'):
-        return True
+        return [origin]
     if origin == "http://localhost:3000":
-        return True
-    return False
+        return [origin]
+    return []
 
 CORS(app, resources={
     r"/*": {
