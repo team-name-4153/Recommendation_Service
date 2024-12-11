@@ -101,7 +101,7 @@ def list_streams():
     SELECT COUNT(*)
     FROM stream_session
     WHERE end_time IS NULL
-    {f"and game = {game}" if game else ""}
+    {f"and game = '{game}'" if game else ""}
     '''
     res = cur_database.custom_query_data(total_count_query)
     total_count = 0
@@ -113,7 +113,7 @@ def list_streams():
     query = f"""
         SELECT * FROM stream_session
         WHERE end_time IS NULL
-        {f"and game = {game}" if game else ""}
+        {f"and game = '{game}'" if game else ""}
         LIMIT {ITEMS_PER_PAGE} OFFSET {offset}
     """
     streams = cur_database.custom_query_data(query)
@@ -151,7 +151,7 @@ def list_videos():
     SELECT COUNT(*)
     FROM stream_session
     WHERE end_time IS NOT NULL
-    {f"and game = {game}" if game else ""}
+    {f"and game = '{game}'" if game else ""}
     '''
     res = cur_database.custom_query_data(total_count_query)
     total_count = 0
@@ -163,7 +163,7 @@ def list_videos():
     query = f"""
         SELECT * FROM stream_session
         WHERE end_time IS NOT NULL
-        {f"and game = {game}" if game else ""}
+        {f"and game = '{game}'" if game else ""}
         LIMIT {ITEMS_PER_PAGE} OFFSET {offset}
     """
     streams = cur_database.custom_query_data(query)
