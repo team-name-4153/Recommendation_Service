@@ -2,6 +2,7 @@ from bson import ObjectId
 import json
 import sys
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import MultiLabelBinarizer
 import pandas as pd
 import random
 def serialize_data(data):
@@ -40,38 +41,46 @@ def serialize_data(data):
 
 def recommendation_setup(watch_sessions):
     watch_sessions_df = pd.DataFrame(watch_sessions, columns=['user_id', 'session_id', 'tags'])
-
-    watch_sessions_df['tags'] = watch_sessions_df['tags'].apply(tuple)
-
+    
+    # Convert tags to tuple, handle empty or None tags
+    watch_sessions_df['tags'] = watch_sessions_df['tags'].apply(lambda x: tuple(x) if x else ())
+    
     tag_data = watch_sessions_df[['session_id', 'tags']].drop_duplicates()
     if tag_data.empty or tag_data['tags'].isnull().all():
         raise ValueError("Tags data is missing or empty.")
-    tag_data['tag_vector_temp'] = tag_data['tags'].apply(lambda tags: None if tags[0] == None else tags)
-    tag_data['tag_vector'] = tag_data['tag_vector_temp'].apply(lambda tags: ' '.join(tags) if tags else '')
-    tag_vectorized = pd.get_dummies(tag_data['tag_vector'])  # One-hot encode tags
-    print(tag_data['tags'])
-    print(tag_data['tag_vector'])
-    print(tag_vectorized)
+    
+    # Clean tags: set to None if empty or first tag is None
+    tag_data['tags'] = tag_data['tags'].apply(
+        lambda tags: None if (not tags or tags[0] is None) else tags
+    )
+    
+    # Use MultiLabelBinarizer for one-hot encoding
+    mlb = MultiLabelBinarizer()
+    tag_vectorized = pd.DataFrame(mlb.fit_transform(tag_data['tags'].dropna()),
+                                  columns=mlb.classes_,
+                                  index=tag_data['session_id'].dropna())
 
     if tag_vectorized.empty:
         raise ValueError("No tags were provided to compute similarities.")
-
+    
+    # Compute tag similarity using cosine similarity
     tag_similarity_matrix = cosine_similarity(tag_vectorized)
-    print(tag_similarity_matrix)
-
+    
     tag_similarity_df = pd.DataFrame(
         tag_similarity_matrix,
-        index=tag_data['session_id'],
-        columns=tag_data['session_id']
+        index=tag_vectorized.index,
+        columns=tag_vectorized.index
     )
-
+    
+    # Create user-stream interaction matrix
     user_stream_matrix = watch_sessions_df.pivot_table(
         index='user_id', 
         columns='session_id', 
         aggfunc='size', 
         fill_value=0
     )
-
+    
+    # Compute stream similarity based on user interactions
     user_stream_array = user_stream_matrix.to_numpy()
     stream_similarity_matrix = cosine_similarity(user_stream_array.T)
     stream_similarity_df = pd.DataFrame(
@@ -79,10 +88,17 @@ def recommendation_setup(watch_sessions):
         index=user_stream_matrix.columns, 
         columns=user_stream_matrix.columns
     )
-
+    
+    # Align indices before combining
+    common_sessions = stream_similarity_df.index.intersection(tag_similarity_df.index)
+    stream_similarity_df = stream_similarity_df.loc[common_sessions, common_sessions]
+    tag_similarity_df = tag_similarity_df.loc[common_sessions, common_sessions]
+    
+    # Combine similarities
     combined_similarity_df = (stream_similarity_df + tag_similarity_df) / 2
-
+    
     return user_stream_matrix, combined_similarity_df
+
 
 
 
