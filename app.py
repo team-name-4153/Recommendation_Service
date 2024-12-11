@@ -111,6 +111,9 @@ def list_games():
     return jsonify({"games": games}), 200
 @app.route('/streams')
 def list_streams():
+    user_info = request.cookies.get("user_info")
+    print("*"*100, file=sys.stderr)
+    print(user_info, file=sys.stderr)
     ITEMS_PER_PAGE = 8
     
     data = request.args

@@ -1,6 +1,6 @@
 # middleware.py
 
-from flask import request, redirect, make_response, session
+from flask import jsonify, request, redirect, make_response, session
 from functools import wraps
 import requests
 import os
@@ -13,8 +13,12 @@ AUTH_SERVICE_BASE_URL = os.getenv('AUTH_SERVICE_BASE_URL')
 COGNITO_DOMAIN = os.getenv('COGNITO_DOMAIN')
 COGNITO_CLIENT_ID = os.getenv('COGNITO_CLIENT_ID')
 COGNITO_CLIENT_SECRET = os.getenv('COGNITO_CLIENT_SECRET')
-TOKEN_URL = f"{COGNITO_DOMAIN}/oauth2/token"
-JWKS_URL = f"{COGNITO_DOMAIN}/.well-known/jwks.json"
+COGNITO_REGION = os.getenv('COGNITO_REGION')
+COGNITO_REDIRECT_URI = os.getenv('COGNITO_REDIRECT_URI')
+
+USER_POOL_ID = os.getenv('USER_POOL_ID')
+TOKEN_URL = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}/oauth2/token"
+JWKS_URL = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json"
 
 
 def validate_jwt_token(token):
@@ -22,7 +26,12 @@ def validate_jwt_token(token):
         jwks_response = requests.get(JWKS_URL).json()
         headers = jwt.get_unverified_header(token)
         kid = headers.get("kid")
-        key = next(k for k in jwks_response["keys"] if k["kid"] == kid)
+        try:
+            key = next(k for k in jwks_response["keys"] if k["kid"] == kid)
+        except StopIteration:
+            print(f"No matching 'kid' found. JWT Header 'kid': {kid}")
+            print(f"Available 'kids': {[k['kid'] for k in jwks_response['keys']]}")
+            return False, None
         public_key = jwk.construct(key)
 
         # Verify the token
@@ -73,23 +82,24 @@ def token_required(f):
                 }
                 headers = {"Content-Type": "application/x-www-form-urlencoded"}
                 response = requests.post(TOKEN_URL, data=token_payload, headers=headers)
+                print("Cognito Response:", response.json())
                 new_tokens = response.json()
 
                 if "error" in new_tokens:
                     raise Exception(new_tokens["error_description"])
 
                 res = make_response(f(*args, **kwargs))
-                res.set_cookie("access_token", new_tokens.get("access_token"))
-                # res.set_cookie("refresh_token", new_tokens.get("refresh_token"))
-                # res.set_cookie("id_token", new_tokens.get("id_token"))
-                return res
+                res.set_cookie("access_token", new_tokens.get('access_token'))
+                # res.set_cookie("refresh_token", new_tokens.get('refresh_token'))
+                res.set_cookie("id_token", new_tokens.get('id_token'))
+                valid, claims = validate_jwt_token(new_tokens.get('access_token'))
+                if valid:
+                    print("automatic token refresh done")
+                    return res
             except Exception as e:
                 print(f"Token refresh error: {e}")
 
-        # Redirect to the login page on the authentication service
-        redirect_url = request.url
-        print(f"{AUTH_SERVICE_BASE_URL}/login?redirect_after_login={redirect_url}")
-        return redirect(f"{AUTH_SERVICE_BASE_URL}/login?redirect_after_login={redirect_url}")
+        return jsonify({"error": "not authorized"}), 401
 
     return decorated_function
 
