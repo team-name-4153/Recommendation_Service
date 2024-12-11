@@ -1,6 +1,7 @@
 import datetime
 from flask import Flask, jsonify, request
 from database.rds_database import rds_database
+from middleware import token_required
 from models import Recommendation_Service_Model
 from dataclasses import asdict
 from util import * 
@@ -18,6 +19,7 @@ cur_database = rds_database(db_name=DB_NAME)
 
 
 @app.route('/create_stream', methods=['POST'])
+@token_required
 def create_stream():
     data = request.get_json()
     streamer_id = data.get('streamer_id')
@@ -63,6 +65,7 @@ def create_stream():
         })
 
 @app.route('/end_stream', methods=['POST'])
+@token_required
 def end_stream():
     data = request.get_json()
     session_id = data.get('session_id')
