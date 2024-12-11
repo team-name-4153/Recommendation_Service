@@ -108,7 +108,7 @@ def list_games():
     return jsonify({"games": games}), 200
 @app.route('/streams')
 def list_streams():
-    ITEMS_PER_PAGE = 10
+    ITEMS_PER_PAGE = 8
     
     data = request.args
     page = int(data.get('page', 1))
@@ -160,7 +160,7 @@ def list_streams():
 
 @app.route('/videos')
 def list_videos():
-    ITEMS_PER_PAGE = 10
+    ITEMS_PER_PAGE = 8
     
     data = request.args
     page = int(data.get('page', 1))
@@ -298,7 +298,7 @@ def recommend_streams(user_id):
         "data": recommended_streams
     }), 200
 
-@app.route("/videos/recommend/<int:user_id>")
+@app.route("/videos/recommend/<str:user_id>")
 def recommend_videos(user_id):
     top_n = int(request.args.get('n', 10))
     query = f'''SELECT

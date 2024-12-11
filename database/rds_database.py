@@ -32,6 +32,7 @@ class rds_database:
         except MySQLError as e:
             print(f"Error connecting to the database: {e}", file=sys.stderr)
             sys.exit(1)
+
     def reconnect(self):
         try:
             self.conn.close()
@@ -39,7 +40,7 @@ class rds_database:
             pass
         self.connect()
 
-        
+
     def insert_data_return_id(self, table_name, record):
         if not record:
             return "No record to insert."
@@ -58,7 +59,7 @@ class rds_database:
                 last_id = cursor.lastrowid
 
             print(f"Successfully inserted record into {table_name} with ID {last_id}.")
-            return last_id  # Return the last inserted ID
+            return last_id
         except (OperationalError, InternalError) as e:
             print("Connection lost. Attempting to reconnect...", file=sys.stderr)
             self.reconnect()
@@ -88,7 +89,7 @@ class rds_database:
         except (OperationalError, InternalError) as e:
             print("Connection lost. Attempting to reconnect...", file=sys.stderr)
             self.reconnect()
-            return self.bulk_insert_data(table_name, records)  # Retry
+            return self.bulk_insert_data(table_name, records)
         except Exception as e:
             print(f"Error inserting records: {e}")
             return str(e)
@@ -130,10 +131,7 @@ class rds_database:
     # all_users = self.query_data('users')
     # print(all_users)
     def query_data(self,table_name,columns=None, conditions=None):
-        # Default to selecting all columns if none are specified
         columns_clause = ', '.join(columns) if columns else '*'
-
-        # Constructing the WHERE clause if conditions are provided
         if conditions:
             condition_clauses = ' AND '.join([f"{key} = %s" for key in conditions.keys()])
             condition_values = list(conditions.values())
