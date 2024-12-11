@@ -46,7 +46,8 @@ def recommendation_setup(watch_sessions):
     tag_data = watch_sessions_df[['session_id', 'tags']].drop_duplicates()
     if tag_data.empty or tag_data['tags'].isnull().all():
         raise ValueError("Tags data is missing or empty.")
-
+    print(tag_data, file=sys.stderr)
+    print(tag_data['tags'], file=sys.stderr)
     tag_data['tag_vector'] = tag_data['tags'].apply(lambda tags: ' '.join(tags) if tags else '')
     tag_vectorized = pd.get_dummies(tag_data['tag_vector'])  # One-hot encode tags
 
