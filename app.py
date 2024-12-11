@@ -89,6 +89,22 @@ def end_stream():
     }), 200
 
 
+@app.route('/games')
+def list_games():
+    
+    data = request.args
+    limit = data.get('limit', 10)
+    query = f'''
+    select game
+    from stream_session
+    group by game
+    limit {str(limit)}
+    '''
+    games = cur_database.custom_query_data(query)
+    if games:
+        games = games[0]
+    
+    return jsonify(games), 200
 @app.route('/streams')
 def list_streams():
     ITEMS_PER_PAGE = 10
