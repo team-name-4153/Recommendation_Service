@@ -54,12 +54,31 @@ def recommendation_setup(watch_sessions):
         lambda tags: None if (not tags or tags[0] is None) else tags
     )
     
+    # Ensure alignment by dropping rows where 'tags' is None
+    non_null_tag_data = tag_data.dropna(subset=['tags'])
+    
+    if non_null_tag_data.empty:
+        raise ValueError("No tags were provided to compute similarities.")
+    
     # Use MultiLabelBinarizer for one-hot encoding
     mlb = MultiLabelBinarizer()
-    tag_vectorized = pd.DataFrame(mlb.fit_transform(tag_data['tags'].dropna()),
+    tag_vectorized = pd.DataFrame(mlb.fit_transform(non_null_tag_data['tags']),
                                   columns=mlb.classes_,
-                                  index=tag_data['session_id'].dropna())
-
+                                  index=non_null_tag_data['session_id'])
+    
+    # Handle sessions without tags by assigning zero vectors
+    all_session_ids = tag_data['session_id']
+    sessions_without_tags = tag_data[tag_data['tags'].isnull()]['session_id']
+    
+    # Create zero vectors for sessions without tags
+    zero_vectors = pd.DataFrame(0, index=sessions_without_tags, columns=mlb.classes_)
+    
+    # Combine tag_vectorized with zero_vectors
+    tag_vectorized = pd.concat([tag_vectorized, zero_vectors])
+    
+    # Sort the tag_vectorized index to match stream_similarity_df later
+    tag_vectorized = tag_vectorized.sort_index()
+    
     if tag_vectorized.empty:
         raise ValueError("No tags were provided to compute similarities.")
     
@@ -98,7 +117,6 @@ def recommendation_setup(watch_sessions):
     combined_similarity_df = (stream_similarity_df + tag_similarity_df) / 2
     
     return user_stream_matrix, combined_similarity_df
-
 
 
 
