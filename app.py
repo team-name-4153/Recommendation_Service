@@ -113,6 +113,9 @@ def list_games():
 def list_streams():
     user_info = request.cookies.get("user_info")
     print("*"*100, file=sys.stderr)
+    print(request.cookies, file=sys.stderr)
+    print(request.data, file=sys.stderr)
+    print(request.args, file=sys.stderr)
     print(user_info, file=sys.stderr)
     ITEMS_PER_PAGE = 8
     
