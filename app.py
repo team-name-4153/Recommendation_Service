@@ -140,7 +140,7 @@ def list_streams():
 
 
 @app.route('/videos')
-def list_streams():
+def list_videos():
     ITEMS_PER_PAGE = 10
     
     data = request.args
