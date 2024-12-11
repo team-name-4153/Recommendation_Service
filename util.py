@@ -59,13 +59,13 @@ def recommendation_setup(watch_sessions):
     
     if non_null_tag_data.empty:
         raise ValueError("No tags were provided to compute similarities.")
-    
+    print(non_null_tag_data, file=sys.stderr)
     # Use MultiLabelBinarizer for one-hot encoding
     mlb = MultiLabelBinarizer()
     tag_vectorized = pd.DataFrame(mlb.fit_transform(non_null_tag_data['tags']),
                                   columns=mlb.classes_,
                                   index=non_null_tag_data['session_id'])
-    
+    print(tag_vectorized, file=sys.stderr)
     # Handle sessions without tags by assigning zero vectors
     all_session_ids = tag_data['session_id']
     sessions_without_tags = tag_data[tag_data['tags'].isnull()]['session_id']
@@ -78,6 +78,7 @@ def recommendation_setup(watch_sessions):
     
     # Sort the tag_vectorized index to match stream_similarity_df later
     tag_vectorized = tag_vectorized.sort_index()
+    print(tag_vectorized, file=sys.stderr)
     
     if tag_vectorized.empty:
         raise ValueError("No tags were provided to compute similarities.")
