@@ -15,20 +15,6 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 cur_database = rds_database(db_name=DB_NAME)
 
-''' 
-# Route to add new labels for a resource
-@app.route('/labels/add', methods=['POST'])
-def add_label():
-    resource_id = request.headers.get('resource_id')
-    label = request.headers.get('label') # Assuming just one label per resource_id for now...
-    # label_list = [label.strip() for label in labels.split(',')]
-    # label_entries = [asdict(Recommendation_Service_Model.Label(resource_id=int(resource_id), label=label)) for label in label_list]
-    # result = cur_database.bulk_insert_data("labels", label_entries)
-    label_entry = asdict(Recommendation_Service_Model.Label(resource_id=int(resource_id), label=label.strip()))
-    result = cur_database.bulk_insert_data("labels", [label_entry])  # Pass as a list
-    return jsonify({"Message": result})
-'''
-
 
 
 @app.route('/create_stream', methods=['POST'])
@@ -74,7 +60,7 @@ def create_stream():
         "data": {
             "session_id": session_id
         }
-        }), 200
+        })
 
 @app.route('/end_stream', methods=['POST'])
 def end_stream():
@@ -137,7 +123,7 @@ def list_streams():
         "results": streams
     }
     
-    return jsonify(response, 200)
+    return jsonify(response), 200
 
 
 @app.route('/videos')
@@ -174,7 +160,7 @@ def list_videos():
         "results": streams
     }
     
-    return jsonify(response, 200)
+    return jsonify(response), 200
 
 
 
