@@ -36,8 +36,10 @@ class rds_database:
         try:
             self.conn.close()
         except:
-            pass  # Ignore errors on close
+            pass
         self.connect()
+
+        
     def insert_data_return_id(self, table_name, record):
         if not record:
             return "No record to insert."
@@ -50,11 +52,10 @@ class rds_database:
         values = tuple(record.values())
 
         try:
-            cursor = self.conn.cursor()
-            cursor.execute(sql, values)
-            self.conn.commit()
-            last_id = cursor.lastrowid
-            cursor.close()
+            with self.conn.cursor() as cursor:
+                cursor.execute(sql, values)
+                self.conn.commit()
+                last_id = cursor.lastrowid
 
             print(f"Successfully inserted record into {table_name} with ID {last_id}.")
             return last_id  # Return the last inserted ID
@@ -79,12 +80,11 @@ class rds_database:
         values = [tuple(record.values()) for record in records]
 
         try:
-            cursor = self.conn.cursor()
-            cursor.executemany(sql, values)
-            self.conn.commit()
-            cursor.close()
-            print(f"Successfully inserted {len(records)} records into {table_name}.")
-            return "Success"
+            with self.conn.cursor() as cursor:
+                cursor.executemany(sql, values)
+                self.conn.commit()
+                print(f"Successfully inserted {len(records)} records into {table_name}.")
+                return "Success"
         except (OperationalError, InternalError) as e:
             print("Connection lost. Attempting to reconnect...", file=sys.stderr)
             self.reconnect()
@@ -108,12 +108,11 @@ class rds_database:
         sql = f"UPDATE {table_name} SET {set_clause} WHERE {condition_clause}"
 
         try:
-            cursor = self.conn.cursor()
-            cursor.execute(sql, values)
-            self.conn.commit()
-            cursor.close()
-            print(f"Successfully updated records in {table_name}.")
-            return "Success"
+            with self.conn.cursor() as cursor:
+                cursor.execute(sql, values)
+                self.conn.commit()
+                print(f"Successfully updated records in {table_name}.")
+                return "Success"
         except (OperationalError, InternalError) as e:
             print("Connection lost. Attempting to reconnect...", file=sys.stderr)
             self.reconnect()
@@ -144,18 +143,17 @@ class rds_database:
 
         # Executing the query
         try:
-            cursor = self.conn.cursor()
-            if conditions:
-                cursor.execute(sql, condition_values)
-            else:
-                cursor.execute(sql)
-            records = cursor.fetchall()
-            res = []
-            if records:
-                columns = [desc[0] for desc in cursor.description]
-                res = [dict(zip(columns, record)) for record in records]
-            cursor.close()
-            return res
+            with self.conn.cursor() as cursor:
+                if conditions:
+                    cursor.execute(sql, condition_values)
+                else:
+                    cursor.execute(sql)
+                records = cursor.fetchall()
+                res = []
+                if records:
+                    columns = [desc[0] for desc in cursor.description]
+                    res = [dict(zip(columns, record)) for record in records]
+                return res
         except (OperationalError, InternalError) as e:
             print("Connection lost. Attempting to reconnect...", file=sys.stderr)
             self.reconnect()
@@ -167,24 +165,15 @@ class rds_database:
 
     def custom_query_data(self, sql):
         try:
-            # Ping the server to check if the connection is alive; reconnect if not
-            self.conn.ping(reconnect=True)
-        except OperationalError as e:
-            print(f"Error pinging database: {e}", file=sys.stderr)
-            self.reconnect()
-            
-        cursor = None
-        try:
-            cursor = self.conn.cursor()
+            with self.conn.cursor() as cursor:
+                cursor.execute(sql)
+                records = cursor.fetchall()
+                res = []
+                if records:
+                    columns = [desc[0] for desc in cursor.description]
+                    res = [dict(zip(columns, record)) for record in records]
 
-            cursor.execute(sql)
-            records = cursor.fetchall()
-            res = []
-            if records:
-                columns = [desc[0] for desc in cursor.description]
-                res = [dict(zip(columns, record)) for record in records]
-            cursor.close()
-            return res
+                return res
         except (OperationalError, InternalError) as e:
             print("Connection lost. Attempting to reconnect...", file=sys.stderr)
             self.reconnect()
