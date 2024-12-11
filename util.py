@@ -46,15 +46,18 @@ def recommendation_setup(watch_sessions):
     tag_data = watch_sessions_df[['session_id', 'tags']].drop_duplicates()
     if tag_data.empty or tag_data['tags'].isnull().all():
         raise ValueError("Tags data is missing or empty.")
-    print(tag_data, file=sys.stderr)
-    print(tag_data['tags'], file=sys.stderr)
-    tag_data['tag_vector'] = tag_data['tags'].apply(lambda tags: ' '.join(tags) if tags else '')
+    tag_data['tag_vector_temp'] = tag_data['tags'].apply(lambda tags: None if tags[0] == None else tags)
+    tag_data['tag_vector'] = tag_data['tag_vector_temp'].apply(lambda tags: ' '.join(tags) if tags else '')
     tag_vectorized = pd.get_dummies(tag_data['tag_vector'])  # One-hot encode tags
+    print(tag_data['tags'])
+    print(tag_data['tag_vector'])
+    print(tag_vectorized)
 
     if tag_vectorized.empty:
         raise ValueError("No tags were provided to compute similarities.")
 
     tag_similarity_matrix = cosine_similarity(tag_vectorized)
+    print(tag_similarity_matrix)
 
     tag_similarity_df = pd.DataFrame(
         tag_similarity_matrix,
