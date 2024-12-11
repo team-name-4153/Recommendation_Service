@@ -1,4 +1,4 @@
-from bson import ObjectId
+
 import json
 import sys
 from sklearn.metrics.pairwise import cosine_similarity
@@ -129,6 +129,7 @@ def get_top_similar_streams(stream_similarity_df, stream_id, n=5):
 
 
 def recommend_streams_for_user(watch_sessions, user_id, top_n=5):
+    print(watch_sessions, file=sys.stderr)
     """Recommend streams for a user based on streams they've interacted with."""
     user_stream_matrix, stream_similarity_df = recommendation_setup(watch_sessions)
     # raise ValueError(stream_similarity_df["session_id"])
