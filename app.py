@@ -1,5 +1,5 @@
 import datetime
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, make_response, request
 from database.rds_database import rds_database
 from middleware import token_required
 from models import Recommendation_Service_Model
@@ -95,7 +95,14 @@ def end_stream():
 
 @app.route('/games')
 def list_games():
-    
+    resp = make_response(jsonify({"message": "Logged in"}))
+    resp.set_cookie(
+        'user_info',
+        value='1324',           # Example value
+        httponly=True,         # Prevents JavaScript access
+        secure=True,           # Ensures cookie is sent over HTTPS
+        samesite='None'        # Allows cross-site cookie
+    )
     data = request.args
     limit = data.get('limit', 10)
     query = f'''
