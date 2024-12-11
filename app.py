@@ -260,7 +260,7 @@ def store_watch_session():
 
 
 @app.route("/videos/recommend")
-def recommend_videos(user_id):
+def recommend_videos():
     data = request.args
     user_id = data.get('user_id', None)
     if not user_id:
