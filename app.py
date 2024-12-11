@@ -258,47 +258,8 @@ def store_watch_session():
     }), 200
 
 
-@app.route("/streams/recommend/<int:user_id>")
-def recommend_streams(user_id):
-    top_n = int(request.args.get('n', 10))
-    query = f'''SELECT
-            vs.user_id,
-            ss.session_id,
-            st.tag_name
-        FROM
-            stream_session ss
-        LEFT JOIN
-                view_session vs ON ss.session_id = vs.session_id
-        LEFT JOIN
-            stream_tag st ON ss.session_id = st.session_id
-        WHERE ss.end_time is NULL
-            '''
-    streams = cur_database.custom_query_data(query)
-    result_dict = {}
-    for stream in streams:
-        ui = stream["user_id"]
-        si = stream["session_id"]
-        if (ui, si) not in result_dict:
-            result_dict[(ui, si)] = []
-        result_dict[(ui, si)].append(stream["tag_name"])
-    
-    res = [[user_id, session_id, tags] for (user_id, session_id), tags in result_dict.items()]
-    recommended_stream_ids = recommend_streams_for_user(res, user_id, top_n=top_n)
-    formatted_streams = tuple(recommended_stream_ids)
-    if len(formatted_streams) == 1:
-        formatted_streams = (formatted_streams[0],)
-    query = f"""
-        SELECT * FROM stream_session
-        WHERE session_id IN {formatted_streams}
-    """
-    recommended_streams = cur_database.custom_query_data(query)
-    return jsonify({
-        'status': 'success',
-        'message': 'OK',
-        "data": recommended_streams
-    }), 200
 
-@app.route("/videos/recommend/<str:user_id>")
+@app.route("/videos/recommend/<string:user_id>")
 def recommend_videos(user_id):
     top_n = int(request.args.get('n', 10))
     query = f'''SELECT
