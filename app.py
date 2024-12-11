@@ -13,7 +13,7 @@ load_dotenv()
 DB_NAME = os.getenv("RDS_DB_NAME")
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 cur_database = rds_database(db_name=DB_NAME)
 
 
