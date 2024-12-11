@@ -100,11 +100,12 @@ def list_games():
     group by game
     limit {str(limit)}
     '''
-    games = cur_database.custom_query_data(query)
-    if games:
-        games = games[0]
+    res = cur_database.custom_query_data(query)
+    games = []
+    for row in res:
+        games.append(row["game"])
     
-    return jsonify(games), 200
+    return jsonify({"games": games}), 200
 @app.route('/streams')
 def list_streams():
     ITEMS_PER_PAGE = 10

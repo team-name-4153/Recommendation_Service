@@ -152,16 +152,13 @@ class rds_database:
                 cursor.execute(sql, condition_values)
             else:
                 cursor.execute(sql)
-
-            # Fetching all the records
             records = cursor.fetchall()
-            cursor.close()
-
-            # Optionally, return records as a list of dictionaries for better readability
+            res = []
             if records:
                 columns = [desc[0] for desc in cursor.description]
-                return [dict(zip(columns, record)) for record in records]
-            return []
+                res = [dict(zip(columns, record)) for record in records]
+            cursor.close()
+            return res
         except OperationalError as e:
             if e.args[0] in (2006, 2013):
                 print("Connection lost. Attempting to reconnect...", file=sys.stderr)
@@ -182,11 +179,16 @@ class rds_database:
             
         cursor = None
         try:
-            with self.conn.cursor() as cursor:
-                cursor.execute(sql)
-                records = cursor.fetchall()
+            cursor = self.conn.cursor()
+
+            cursor.execute(sql)
+            records = cursor.fetchall()
+            res = []
+            if records:
                 columns = [desc[0] for desc in cursor.description]
-                return [dict(zip(columns, record)) for record in records]
+                res = [dict(zip(columns, record)) for record in records]
+            cursor.close()
+            return res
         except OperationalError as e:
             if e.args[0] in (2006, 2013):
                 print("Connection lost. Attempting to reconnect...", file=sys.stderr)
