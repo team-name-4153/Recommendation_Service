@@ -104,15 +104,6 @@ def end_stream():
 
 @app.route('/games')
 def list_games():
-    resp = make_response(jsonify({"message": "Logged in"}))
-    resp.set_cookie(
-        'user_info',
-        value='1324',
-        httponly=True,           # Prevents JavaScript access
-        secure=True,             # Ensures cookie is sent over HTTPS
-        samesite='None'          # Allows cross-site cookie
-    )
-    return resp
     data = request.args
     limit = data.get('limit', 10)
     query = f'''
@@ -130,12 +121,6 @@ def list_games():
 
 @app.route('/streams')
 def list_streams():
-    user_info = request.cookies.get("user_info")
-    print("*"*100, file=sys.stderr)
-    print(request.cookies, file=sys.stderr)
-    print(request.data, file=sys.stderr)
-    print(request.args, file=sys.stderr)
-    print(user_info, file=sys.stderr)
     ITEMS_PER_PAGE = 8
     
     data = request.args
