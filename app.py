@@ -16,13 +16,18 @@ app = Flask(__name__)
 
 CORS(app, resources={
     r"/*": {
-        "origins": [
-        "https://user-home.d27vaquqa87q60.amplifyapp.com",
-        "https://main.d27vaquqa87q60.amplifyapp.com",
-        "http://localhost:3000",
-    ],
+        "origins": "*",
     }
 }, supports_credentials=True)
+# CORS(app, resources={
+#     r"/*": {
+#         "origins": [
+#         "https://user-home.d27vaquqa87q60.amplifyapp.com",
+#         "https://main.d27vaquqa87q60.amplifyapp.com",
+#         "http://localhost:3000",
+#     ],
+#     }
+# }, supports_credentials=True)
 
 cur_database = rds_database(db_name=DB_NAME)
 
