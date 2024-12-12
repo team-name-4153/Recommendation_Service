@@ -34,7 +34,7 @@ cur_database = rds_database(db_name=DB_NAME)
 
 
 @app.route('/create_stream', methods=['POST'])
-@token_required
+# @token_required
 def create_stream():
     data = request.get_json()
     streamer_id = data.get('streamer_id')
@@ -56,7 +56,7 @@ def create_stream():
         "game": game,
         "title": title,
         "start_time": start_time,
-        "hls_folder": "", # a placeholder...
+        "hls_folder": "",
     }
     session_id = cur_database.insert_data_return_id("stream_session", new_session)
 
@@ -80,7 +80,7 @@ def create_stream():
         })
 
 @app.route('/end_stream', methods=['POST'])
-@token_required
+# @token_required
 def end_stream():
     data = request.get_json()
     session_id = data.get('session_id')
