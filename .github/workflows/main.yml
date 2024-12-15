@@ -33,7 +33,7 @@ jobs:
         run: docker save rec_service:latest | gzip > rec_service.tar.gz
 
       - name: Transfer Docker image to EC2
-        uses: appleboy/scp-action@v0.1.11
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
