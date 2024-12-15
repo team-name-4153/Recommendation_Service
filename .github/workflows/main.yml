@@ -72,3 +72,4 @@ jobs:
               -p 5001:5000 \
               --env-file /home/${{ secrets.EC2_USER }}/Recommendation_Environment/.env \
               rec_service:latest
+
