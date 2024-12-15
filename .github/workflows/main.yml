@@ -76,4 +76,5 @@ jobs:
             docker load < /tmp/rec_service.tar.gz
             docker stop rec_service || true
             docker rm rec_service || true
+
             docker run -d --name rec_service -p 5001:5000 rec_service:latest
