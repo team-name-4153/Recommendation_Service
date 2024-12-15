@@ -13,17 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      # - name: Set up SSH key
-      #   run: |
-      #     mkdir -p ~/.ssh
-      #     echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-      #     chmod 600 ~/.ssh/id_rsa
-      #     ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      # - name: Set up SSH
-      #   uses: webfactory/ssh-agent@v0.5.4
-      #   with:
-      #     ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
@@ -77,4 +67,8 @@ jobs:
             docker stop rec_service || true
             docker rm rec_service || true
 
-            docker run -d --name rec_service -p 5001:5000 rec_service:latest
+            docker run -d \
+              --name rec_service \
+              -p 5001:5000 \
+              --env-file /home/${{ secrets.EC2_USER }}/Recommendation_Environment/.env \
+              rec_service:latest
