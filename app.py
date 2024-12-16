@@ -9,6 +9,10 @@ import os
 from dotenv import load_dotenv
 from flask_cors import CORS
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 load_dotenv()
 DB_NAME = os.getenv("RDS_DB_NAME")
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -31,6 +35,28 @@ CORS(app, resources={
 
 cur_database = rds_database(db_name=DB_NAME)
 
+def send_email(to_email, subject, body):
+    """Send an email notification."""
+    sender_email = os.getenv("EMAIL_SENDER")
+    sender_password = os.getenv("EMAIL_PASSWORD")
+    smtp_server = os.getenv("SMTP_SERVER")
+    smtp_port = int(os.getenv("SMTP_PORT", 587))  # Default to 587 for TLS
+    
+    try:
+        message = MIMEMultipart()
+        message['From'] = sender_email
+        message['To'] = to_email
+        message['Subject'] = subject
+        message.attach(MIMEText(body, 'plain'))
+        
+        # Connect to SMTP server and send email
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, to_email, message.as_string())
+        print(f"Email sent to {to_email}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
 
 
 @app.route('/create_stream', methods=['POST'])
@@ -38,6 +64,7 @@ cur_database = rds_database(db_name=DB_NAME)
 def create_stream():
     data = request.get_json()
     streamer_id = data.get('streamer_id')
+    streamer_email = data.get('streamer_email') 
     game = data.get('game')
     tags = data.get("tags")
     title = data.get('title', "")
@@ -71,6 +98,14 @@ def create_stream():
         }
         new_tags_session.append(new_session)
     cur_database.bulk_insert_data("stream_tag", new_tags_session)
+    if streamer_email:
+        subject = "Stream Created Successfully!"
+        body = f"Your stream '{title}' for the game '{game}' has been successfully created and is now live!"
+        send_email(streamer_email, subject, body)
+    else:
+        print("No email found in cookies, skipping notification.")
+
+
     return jsonify({
         'status': 'success',
         'message': 'Store session',
